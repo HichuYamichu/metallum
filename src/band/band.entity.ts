@@ -1,7 +1,8 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { Field, ID, ObjectType } from 'type-graphql';
+import { Album } from '../album/album.entity';
 
-@Entity()
+@Entity('bands')
 @ObjectType()
 export class Band {
   @PrimaryGeneratedColumn()
@@ -20,7 +21,7 @@ export class Band {
   @Field()
   location: string;
 
-  @Column()
+  @Column({ name: 'formed_in' })
   @Field()
   formed: string;
 
@@ -39,4 +40,11 @@ export class Band {
   @Column()
   @Field()
   active: string;
+
+  @OneToMany(
+    type => Album,
+    album => album.band,
+  )
+  @Field()
+  albums: Promise<Album[]>;
 }
