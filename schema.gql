@@ -5,32 +5,43 @@
 
 type Album {
   id: ID!
-  name: String!
+  title: String!
   type: String!
   release: String!
-  catalog: String!
+  catalog: String
+  songs: [Song!]!
+  band: Band!
 }
 
 type Band {
   id: ID!
   name: String!
   country: String!
-  location: String!
-  formed: String!
+  location: String
+  formed: String
   status: String!
   genre: String!
-  themes: String!
-  active: String!
+  themes: String
+  active: String
+  albums: [Album!]!
 }
 
 type Query {
-  band(id: String!): Band!
-  bands: [Band!]!
+  band(id: Float!): Band!
+  bands(skip: Int = 0, take: Int = 25): [Band!]!
+  searchBand(query: String!): [Band!]!
+  album(id: Float!): Album!
+  albums(skip: Int = 0, take: Int = 25): [Album!]!
+  searchAlbum(query: String!): [Album!]!
+  song(id: Float!): Song!
+  songs(skip: Int = 0, take: Int = 25): [Song!]!
+  searchSong(query: String!): [Song!]!
 }
 
 type Song {
   id: ID!
   title: String!
-  length: String!
-  lyrics: String!
+  length: String
+  lyrics: String
+  album: Album!
 }

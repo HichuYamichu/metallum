@@ -3,10 +3,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmConfigService } from './config/typeorm.config';
 import { BandModule } from './band/band.module';
+import { AlbumModule } from './album/album.module';
+import { SongModule } from './song/song.module';
 
 @Module({
   imports: [
-    BandModule,
     TypeOrmModule.forRootAsync({
       useClass: TypeOrmConfigService,
     }),
@@ -15,6 +16,9 @@ import { BandModule } from './band/band.module';
       autoSchemaFile: 'schema.gql',
       context: ({ req }) => ({ req }),
     }),
+    BandModule,
+    AlbumModule,
+    SongModule,
   ],
 })
 export class AppModule {}

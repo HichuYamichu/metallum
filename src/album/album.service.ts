@@ -10,16 +10,29 @@ export class AlbumService {
     private readonly albumRepository: Repository<Album>,
   ) {}
 
-  async findOneById(id: string): Promise<Album> {
-    const band = await this.albumRepository.findOne(id);
-    return band;
+  async findOneById(id: number) {
+    return this.albumRepository.findOne(id);
   }
 
-  async findByBandId(id: string): Promise<Album[]> {
-    return await this.albumRepository.find({ where: { band_id: id } });
+  async findOneWithSongs(id: number) {
+    return this.albumRepository.findOne(id, { relations: ['songs'] });
   }
 
-  async findAll(): Promise<Album[]> {
-    return [] as Album[];
+  async findOneWithBand(id: number) {
+    return this.albumRepository.findOne(id, { relations: ['band'] });
+  }
+
+  async findWithSkipAndTake(skip: number, take: number) {
+    return this.albumRepository.find({ skip, take });
+  }
+
+  async search(query: string) {
+    return this.albumRepository
+      .createQueryBuilder()
+      .select()
+      .where('album_tsvector @@ plainto_tsquery(:query)', { query })
+      .orderBy('ts_rank(album_tsvector, plainto_tsquery(:query))', 'DESC')
+      .limit(25)
+      .getMany();
   }
 }

@@ -8,19 +8,15 @@ import {
 } from '@nestjs/graphql';
 import { Band } from './band.entity';
 import { BandService } from './band.service';
-import { AlbumService } from '../album/album.service';
-import { SearchArgs } from './dto/search.args';
-import { BandsArgs } from './dto/bands.args';
+import { Album } from '../album/album.entity';
+import { FindArgs } from 'src/common/dto/find.args';
 
 @Resolver(of => Band)
 export class BandResolver {
-  constructor(
-    private readonly bandService: BandService,
-    private readonly albumService: AlbumService,
-  ) {}
+  constructor(private readonly bandService: BandService) {}
 
   @Query(returns => Band, { name: 'band' })
-  async band(@Args('id') id: string): Promise<Band> {
+  async band(@Args('id') id: number): Promise<Band> {
     const band = await this.bandService.findOneById(id);
     if (!band) {
       throw new NotFoundException(id);
@@ -28,19 +24,20 @@ export class BandResolver {
     return band;
   }
 
-  @ResolveProperty('albums')
-  async getAlbums(@Parent() band) {
+  @ResolveProperty('albums', () => [Album])
+  async getAlbums(@Parent() band: Band): Promise<Album[]> {
     const { id } = band;
-    return await this.albumService.findByBandId(id);
+    const { albums } = await this.bandService.findOneWithAlbums(id);
+    return albums;
   }
 
-  @Query(returns => [Band])
-  bands(@Args() bandsArgs: BandsArgs): Promise<Band[]> {
-    return this.bandService.findAll();
+  @Query(returns => [Band], { name: 'bands' })
+  bands(@Args() bandsArgs?: FindArgs): Promise<Band[]> {
+    return this.bandService.findWithSkipAndTake(bandsArgs.skip, bandsArgs.take);
   }
 
-  @Query(returns => [Band])
-  search(@Args() searchArgs: SearchArgs): Promise<Band[]> {
-    return this.bandService.findAll();
+  @Query(returns => [Band], { name: 'searchBand' })
+  search(@Args('query') query: string): Promise<Band[]> {
+    return this.bandService.search(query);
   }
 }

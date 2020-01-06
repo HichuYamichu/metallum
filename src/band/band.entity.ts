@@ -2,12 +2,12 @@ import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { Field, ID, ObjectType } from 'type-graphql';
 import { Album } from '../album/album.entity';
 
-@Entity('bands')
+@Entity()
 @ObjectType()
 export class Band {
   @PrimaryGeneratedColumn()
   @Field(type => ID)
-  id: string;
+  id: number;
 
   @Column()
   @Field()
@@ -18,12 +18,12 @@ export class Band {
   country: string;
 
   @Column()
-  @Field()
-  location: string;
+  @Field({ nullable: true })
+  location?: string;
 
   @Column({ name: 'formed_in' })
-  @Field()
-  formed: string;
+  @Field({ nullable: true })
+  formed?: string;
 
   @Column()
   @Field()
@@ -34,17 +34,20 @@ export class Band {
   genre: string;
 
   @Column()
-  @Field()
-  themes: string;
+  @Field({ nullable: true })
+  themes?: string;
 
   @Column()
-  @Field()
-  active: string;
+  @Field({ nullable: true })
+  active?: string;
 
   @OneToMany(
     type => Album,
     album => album.band,
   )
-  @Field()
-  albums: Promise<Album[]>;
+  @Field(type => [Album])
+  albums: Album[];
+
+  @Column('tsvector', { select: false, name: 'band_tsvector' })
+  bandTSVector: any;
 }

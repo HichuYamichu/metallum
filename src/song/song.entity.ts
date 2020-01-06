@@ -1,29 +1,40 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Field, ID, ObjectType } from 'type-graphql';
 import { Album } from '../album/album.entity';
 
-@Entity('songs')
+@Entity()
 @ObjectType()
 export class Song {
   @PrimaryGeneratedColumn()
   @Field(type => ID)
-  id: string;
+  id: number;
 
   @Column()
   @Field()
   title: string;
 
   @Column()
-  @Field()
-  length: string;
+  @Field({ nullable: true })
+  length?: string;
 
   @Column()
-  @Field()
-  lyrics: string;
+  @Field({ nullable: true })
+  lyrics?: string;
 
   @ManyToOne(
     type => Album,
     album => album.songs,
   )
-  album: Promise<Album>;
+  @JoinColumn({ name: 'album_id' })
+  @Field(type => Album)
+  album: Album;
+
+  @Column('tsvector', { select: false, name: 'song_tsvector' })
+  songTSVector: any;
 }

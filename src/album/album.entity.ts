@@ -4,21 +4,22 @@ import {
   PrimaryGeneratedColumn,
   OneToMany,
   ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { Field, ID, ObjectType } from 'type-graphql';
 import { Song } from '../song/song.entity';
 import { Band } from '../band/band.entity';
 
-@Entity('albums')
+@Entity()
 @ObjectType()
 export class Album {
   @PrimaryGeneratedColumn()
   @Field(type => ID)
-  id: string;
+  id: number;
 
   @Column()
   @Field()
-  name: string;
+  title: string;
 
   @Column()
   @Field()
@@ -29,18 +30,24 @@ export class Album {
   release: string;
 
   @Column()
-  @Field()
-  catalog: string;
+  @Field({ nullable: true })
+  catalog?: string;
 
   @OneToMany(
     type => Song,
     song => song.album,
   )
-  songs: Promise<Song[]>;
+  @Field(type => [Song])
+  songs: Song[];
 
   @ManyToOne(
     type => Band,
     band => band.albums,
   )
-  band: Promise<Band>;
+  @JoinColumn({ name: 'band_id' })
+  @Field(type => Band)
+  band: Band;
+
+  @Column('tsvector', { select: false, name: 'album_tsvector' })
+  albumTSVector: any;
 }
