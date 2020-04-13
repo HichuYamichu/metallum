@@ -13,7 +13,7 @@ import { SongModule } from './song/song.module';
     }),
     GraphQLModule.forRoot({
       playground: true,
-      autoSchemaFile: 'schema.gql',
+      autoSchemaFile: true,
       context: ({ req }) => ({ req }),
     }),
     BandModule,

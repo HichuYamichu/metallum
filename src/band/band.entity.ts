@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
-import { Field, ID, ObjectType } from 'type-graphql';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Album } from '../album/album.entity';
 
 @Entity()
@@ -41,10 +41,7 @@ export class Band {
   @Field({ nullable: true })
   active?: string;
 
-  @OneToMany(
-    type => Album,
-    album => album.band,
-  )
+  @OneToMany(type => Album, album => album.band)
   @Field(type => [Album])
   albums: Album[];
 

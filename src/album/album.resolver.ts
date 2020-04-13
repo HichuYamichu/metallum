@@ -1,11 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
-import {
-  Args,
-  Query,
-  Resolver,
-  ResolveProperty,
-  Parent,
-} from '@nestjs/graphql';
+import { Args, Query, Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { Album } from './album.entity';
 import { AlbumService } from './album.service';
 import { Song } from '../song/song.entity';
@@ -25,14 +19,14 @@ export class AlbumResolver {
     return album;
   }
 
-  @ResolveProperty('songs', () => [Song])
+  @ResolveField('songs', () => [Song])
   async getSongs(@Parent() album: Album): Promise<Song[]> {
     const { id } = album;
     const { songs } = await this.albumService.findOneWithSongs(id);
     return songs;
   }
 
-  @ResolveProperty('band', () => Band)
+  @ResolveField('band', () => Band)
   async getBand(@Parent() album: Album): Promise<Band> {
     const { id } = album;
     const { band } = await this.albumService.findOneWithBand(id);

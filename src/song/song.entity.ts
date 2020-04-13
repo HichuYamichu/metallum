@@ -5,7 +5,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Field, ID, ObjectType } from 'type-graphql';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Album } from '../album/album.entity';
 
 @Entity()
@@ -27,10 +27,7 @@ export class Song {
   @Field({ nullable: true })
   lyrics?: string;
 
-  @ManyToOne(
-    type => Album,
-    album => album.songs,
-  )
+  @ManyToOne(type => Album, album => album.songs)
   @JoinColumn({ name: 'album_id' })
   @Field(type => Album)
   album: Album;

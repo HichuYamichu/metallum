@@ -1,10 +1,4 @@
-import {
-  Resolver,
-  Query,
-  Args,
-  ResolveProperty,
-  Parent,
-} from '@nestjs/graphql';
+import { Resolver, Query, Args, ResolveField, Parent } from '@nestjs/graphql';
 import { Song } from './song.entity';
 import { SongService } from './song.service';
 import { NotFoundException } from '@nestjs/common';
@@ -24,7 +18,7 @@ export class SongResolver {
     return album;
   }
 
-  @ResolveProperty('album', () => Album)
+  @ResolveField('album', () => Album)
   async getBand(@Parent() song: Song): Promise<Album> {
     const { id } = song;
     const { album } = await this.songService.findOneWithAlbum(id);
