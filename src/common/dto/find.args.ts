@@ -5,10 +5,10 @@ import { ArgsType, Field, Int } from '@nestjs/graphql';
 export class FindArgs {
   @Field(type => Int)
   @Min(0)
-  skip: number = 0;
+  public skip = 0;
 
   @Field(type => Int)
   @Min(1)
   @Max(50)
-  take: number = 25;
+  public take = 25;
 }

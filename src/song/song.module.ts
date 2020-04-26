@@ -6,6 +6,6 @@ import { Song } from './song.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Song])],
-  providers: [SongResolver, SongService],
+  providers: [SongResolver, SongService]
 })
 export class SongModule {}

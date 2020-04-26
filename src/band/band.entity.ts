@@ -1,50 +1,53 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany, PrimaryColumn } from 'typeorm';
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Album } from '../album/album.entity';
 
 @Entity()
 @ObjectType()
 export class Band {
-  @PrimaryGeneratedColumn()
+  @PrimaryColumn({ type: 'text' })
   @Field(type => ID)
-  id: number;
+  public id: string;
 
   @Column()
   @Field()
-  name: string;
+  public name: string;
 
-  @Column()
-  @Field()
-  country: string;
-
-  @Column()
+  @Column({ nullable: true })
   @Field({ nullable: true })
-  location?: string;
+  public country: string;
 
-  @Column({ name: 'formed_in' })
+  @Column({ nullable: true })
   @Field({ nullable: true })
-  formed?: string;
+  public location?: string;
 
-  @Column()
-  @Field()
-  status: string;
-
-  @Column()
-  @Field()
-  genre: string;
-
-  @Column()
+  @Column({ name: 'formed_in', nullable: true })
   @Field({ nullable: true })
-  themes?: string;
+  public formed?: string;
 
-  @Column()
+  @Column({ nullable: true })
   @Field({ nullable: true })
-  active?: string;
+  public status: string;
 
-  @OneToMany(type => Album, album => album.band)
+  @Column({ nullable: true })
+  @Field({ nullable: true })
+  public genre: string;
+
+  @Column({ nullable: true })
+  @Field({ nullable: true })
+  public themes?: string;
+
+  @Column({ nullable: true })
+  @Field({ nullable: true })
+  public active?: string;
+
+  @OneToMany(type => Album, album => album.band, {
+    cascade: true,
+    onDelete: 'CASCADE'
+  })
   @Field(type => [Album])
-  albums: Album[];
+  public albums: Album[];
 
-  @Column('tsvector', { select: false, name: 'band_tsvector' })
-  bandTSVector: any;
+  @Column('tsvector', { select: false, name: 'band_tsvector', nullable: true })
+  public bandTSVector: any;
 }

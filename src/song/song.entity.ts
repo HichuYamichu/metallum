@@ -1,37 +1,31 @@
-import {
-  Entity,
-  Column,
-  PrimaryGeneratedColumn,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Album } from '../album/album.entity';
 
 @Entity()
 @ObjectType()
 export class Song {
-  @PrimaryGeneratedColumn()
+  @PrimaryColumn({ type: 'text' })
   @Field(type => ID)
-  id: number;
+  public id: string;
 
   @Column()
   @Field()
-  title: string;
+  public title: string;
 
-  @Column()
+  @Column({ nullable: true })
   @Field({ nullable: true })
-  length?: string;
+  public length?: string;
 
-  @Column()
+  @Column({ nullable: true })
   @Field({ nullable: true })
-  lyrics?: string;
+  public lyrics?: string;
 
-  @ManyToOne(type => Album, album => album.songs)
+  @ManyToOne(type => Album, album => album.songs, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'album_id' })
   @Field(type => Album)
-  album: Album;
+  public album: Album;
 
-  @Column('tsvector', { select: false, name: 'song_tsvector' })
-  songTSVector: any;
+  @Column('tsvector', { select: false, name: 'song_tsvector', nullable: true })
+  public songTSVector: any;
 }

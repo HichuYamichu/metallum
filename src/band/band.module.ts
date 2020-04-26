@@ -6,6 +6,6 @@ import { Band } from './band.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Band])],
-  providers: [BandResolver, BandService],
+  providers: [BandResolver, BandService]
 })
 export class BandModule {}

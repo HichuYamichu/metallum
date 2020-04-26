@@ -1,10 +1,10 @@
 import {
   Entity,
   Column,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   OneToMany,
   ManyToOne,
-  JoinColumn,
+  JoinColumn
 } from 'typeorm';
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Song } from '../song/song.entity';
@@ -13,41 +13,35 @@ import { Band } from '../band/band.entity';
 @Entity()
 @ObjectType()
 export class Album {
-  @PrimaryGeneratedColumn()
+  @PrimaryColumn({ type: 'text' })
   @Field(type => ID)
-  id: number;
+  public id: string;
 
   @Column()
   @Field()
-  title: string;
+  public title: string;
 
-  @Column()
-  @Field()
-  type: string;
-
-  @Column()
-  @Field()
-  release: string;
-
-  @Column()
+  @Column({ nullable: true })
   @Field({ nullable: true })
-  catalog?: string;
+  public type: string;
 
-  @OneToMany(
-    type => Song,
-    song => song.album,
-  )
+  @Column({ nullable: true })
+  @Field({ nullable: true })
+  public release: string;
+
+  @Column({ nullable: true })
+  @Field({ nullable: true })
+  public catalog?: string;
+
+  @OneToMany(type => Song, song => song.album, { cascade: true })
   @Field(type => [Song])
-  songs: Song[];
+  public songs: Song[];
 
-  @ManyToOne(
-    type => Band,
-    band => band.albums,
-  )
+  @ManyToOne(type => Band, band => band.albums, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'band_id' })
   @Field(type => Band)
-  band: Band;
+  public band: Band;
 
-  @Column('tsvector', { select: false, name: 'album_tsvector' })
-  albumTSVector: any;
+  @Column('tsvector', { select: false, name: 'album_tsvector', nullable: true })
+  public albumTSVector?: any;
 }

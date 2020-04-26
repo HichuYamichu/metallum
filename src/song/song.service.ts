@@ -5,24 +5,24 @@ import { Repository } from 'typeorm';
 
 @Injectable()
 export class SongService {
-  constructor(
+  public constructor(
     @InjectRepository(Song)
-    private readonly songRepository: Repository<Song>,
+    private readonly songRepository: Repository<Song>
   ) {}
 
-  async findOneByID(id: number) {
+  public async findOneByID(id: string) {
     return this.songRepository.findOne(id);
   }
 
-  async findOneWithAlbum(id: number) {
+  public async findOneWithAlbum(id: string) {
     return this.songRepository.findOne(id, { relations: ['album'] });
   }
 
-  async findWithSkipAndTake(skip: number, take: number) {
+  public async findWithSkipAndTake(skip: number, take: number) {
     return this.songRepository.find({ skip, take });
   }
 
-  async search(query: string) {
+  public async search(query: string) {
     return this.songRepository
       .createQueryBuilder()
       .select()

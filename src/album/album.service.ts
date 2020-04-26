@@ -5,28 +5,28 @@ import { Album } from './album.entity';
 
 @Injectable()
 export class AlbumService {
-  constructor(
+  public constructor(
     @InjectRepository(Album)
-    private readonly albumRepository: Repository<Album>,
+    private readonly albumRepository: Repository<Album>
   ) {}
 
-  async findOneById(id: number) {
+  public async findOneById(id: string) {
     return this.albumRepository.findOne(id);
   }
 
-  async findOneWithSongs(id: number) {
+  public async findOneWithSongs(id: string) {
     return this.albumRepository.findOne(id, { relations: ['songs'] });
   }
 
-  async findOneWithBand(id: number) {
+  public async findOneWithBand(id: string) {
     return this.albumRepository.findOne(id, { relations: ['band'] });
   }
 
-  async findWithSkipAndTake(skip: number, take: number) {
+  public async findWithSkipAndTake(skip: number, take: number) {
     return this.albumRepository.find({ skip, take });
   }
 
-  async search(query: string) {
+  public async search(query: string) {
     return this.albumRepository
       .createQueryBuilder()
       .select()

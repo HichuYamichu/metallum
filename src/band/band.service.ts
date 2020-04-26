@@ -5,26 +5,26 @@ import { Band } from './band.entity';
 
 @Injectable()
 export class BandService {
-  constructor(
+  public constructor(
     @InjectRepository(Band)
-    private readonly bandRepository: Repository<Band>,
+    private readonly bandRepository: Repository<Band>
   ) {}
 
-  async findOneById(id: number) {
+  public async findOneById(id: string) {
     return this.bandRepository.findOne(id);
   }
 
-  async findOneWithAlbums(id: number) {
+  public async findOneWithAlbums(id: string) {
     return this.bandRepository.findOne(id, {
-      relations: ['albums'],
+      relations: ['albums']
     });
   }
 
-  async findWithSkipAndTake(skip: number, take: number) {
+  public async findWithSkipAndTake(skip: number, take: number) {
     return this.bandRepository.find({ skip, take });
   }
 
-  async search(query: string) {
+  public async search(query: string) {
     return this.bandRepository
       .createQueryBuilder()
       .select()
