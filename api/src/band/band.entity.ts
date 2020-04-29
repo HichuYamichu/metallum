@@ -5,7 +5,7 @@ import { Album } from '../album/album.entity';
 @Entity()
 @ObjectType()
 export class Band {
-  @PrimaryColumn({ type: 'text' })
+  @PrimaryColumn({ type: 'character varying' })
   @Field(type => ID)
   public id: string;
 

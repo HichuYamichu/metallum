@@ -3,112 +3,90 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, getManager } from 'typeorm';
 import * as cheerio from 'cheerio';
 import * as moment from 'moment';
-import axios, { AxiosError } from 'axios';
 import { Band } from '../band/band.entity';
 import { Album } from '../album/album.entity';
 import { Song } from '../song/song.entity';
+import { HttpService } from './http.service';
 
 @Injectable()
 export class ScrapeService {
+  private readonly logger = new Logger(ScrapeService.name);
   private readonly BASE_URL = `https://www.metal-archives.com`;
   private readonly DISCOGRAPHY_URL = `/band/discography/id/`;
   private readonly LYRICS_URL = `/release/ajax-view-lyrics/id/`;
   private readonly MA_ID_PATTERN = new RegExp(`([^\/]+$)`);
-  private readonly client = axios.create({
-    baseURL: this.BASE_URL
-  });
 
   public constructor(
     @InjectRepository(Band)
-    private readonly bandRepository: Repository<Band>
-  ) {
-    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-    let retryCount = 0;
-    this.client.interceptors.response.use(null, async (error: AxiosError) => {
-      console.log({
-        message: error.message,
-        url: error.config.url
-      });
-      retryCount++;
-      await sleep(1000 * retryCount);
-      return this.client.request({
-        method: error.config.method,
-        url: error.config.url,
-        params: error.config.params,
-        withCredentials: true
-      });
-    });
-  }
+    private readonly bandRepository: Repository<Band>,
+    private readonly http: HttpService
+  ) {}
 
   public async updates() {
     const day = moment().format('MMMM DD');
-    const URls = await this.getBandURls(day, 'modified');
-    const updatedCount = await this.updateDB([...URls]);
-    return updatedCount;
+    const promises = [];
+    for await (const url of this.generateBandURl(day, 'modified')) {
+      // console.log(url);
+      promises.push(this.saveBand(this.getBandData(url)));
+    }
+    await Promise.all(promises);
+    return promises.length;
   }
 
-  public async additions() {
-    const day = moment().format('MMMM DD');
-    const URls = await this.getBandURls(day, 'created');
-    const updatedCount = await this.updateDB([...URls]);
-    return updatedCount;
+  // public async additions() {
+  //   const day = moment().format('MMMM DD');
+  //   const URls = await this.generateBandURl(day, 'created');
+  //   const updatedCount = await this.saveBand([...URls]);
+  //   return updatedCount;
+  // }
+  private async *generateAll(source: string) {
+    const res = await this.http.get(source);
+    for (const dataSet of res.data.aaData) {
+      const $ = cheerio.load(dataSet[1]);
+      const url = $('a').attr().href;
+      yield url;
+    }
   }
 
-  public async fullScrape() {
-    const selectionPath = '/archives/ajax-band-list/selection/';
-    const pathFragment = moment().format('YYYY-MM');
-    const params = `sEcho=1&sSortDir_0=desc`;
-    const url = `${selectionPath}${pathFragment}/by/created/json/1?${params}`;
-    const res = await this.client.get(url);
-    const $ = cheerio.load(res.data.aaData[0][1]);
-    const newestBandURL = $('a').attr().href;
-    const highestID = parseInt(this.MA_ID_PATTERN.exec(newestBandURL)[0], 10);
-  }
-
-  private async getBandURls(day: string, type: string, page = 0) {
+  private async *generateBandURl(
+    day: string,
+    type: string,
+    page = 0
+  ): AsyncGenerator<string, any, undefined> {
     const selectionPath = '/archives/ajax-band-list/selection/';
     const pathFragment = moment().format('YYYY-MM');
     const params = `sEcho=${page + 1}&sSortDir_0=desc&iDisplayStart=${
       page * 200
     }`;
     const url = `${selectionPath}${pathFragment}/by/${type}/json/1?${params}`;
-    const res = await this.client.get(url);
-    const URLs: Set<string> = new Set();
+    const res = await this.http.get(url);
     for (const dataSet of res.data.aaData) {
       // Skip irrelevant updates/additions.
       if (dataSet[0] !== day) continue;
       const $ = cheerio.load(dataSet[1]);
       const url = $('a').attr().href;
-      URLs.add(url);
+      yield url;
     }
     const lastEl = res.data.aaData[res.data.aaData.length - 1];
     if (lastEl[0] === day) {
       // There's a chance there were more than 200 updates/additions that day. So we skip first 200
       // and look for more bands updated that day.
-      const moreURLs = await this.getBandURls(day, type, page + 1);
-      for (const u of moreURLs) {
-        URLs.add(u);
-      }
+      yield* this.generateBandURl(day, type, page + 1);
     }
-    return URLs;
   }
 
-  private async updateDB(URLs: string[]) {
-    for (const url of URLs) {
-      const band = await this.getBandData(url);
-      const existing = await this.bandRepository.findOne(band.id);
-      if (existing) {
-        getManager().transaction(async transactionalEntityManager => {
-          await transactionalEntityManager.remove(existing);
-          await transactionalEntityManager.save(band);
-        });
-      } else {
-        this.bandRepository.save(band);
-      }
+  private async saveBand(bandPromise: Promise<Band>) {
+    const band = await bandPromise;
+    // typeorm #4122 workaround
+    const existing = await this.bandRepository.findOne(band.id);
+    if (existing) {
+      getManager().transaction(async transactionalEntityManager => {
+        await transactionalEntityManager.remove(existing);
+        await transactionalEntityManager.save(band);
+      });
+    } else {
+      this.bandRepository.save(band);
     }
-
-    return URLs.length;
   }
 
   private normalize(s: string): string | null {
@@ -122,7 +100,7 @@ export class ScrapeService {
   }
 
   private async getBandData(url: string) {
-    const res = await this.client.get(url);
+    const res = await this.http.get(url);
     const $ = cheerio.load(res.data);
     const band = new Band();
     band.id = this.MA_ID_PATTERN.exec(url)[0];
@@ -137,11 +115,16 @@ export class ScrapeService {
       else if (i === 7) band.active = this.normalize($(el).text());
     });
 
-    const URLs = await this.getBandDiscography(band.id);
-
     const promises: Promise<Album>[] = [];
-    for (url of URLs) {
-      promises.push(this.getAlbumData(url));
+    {
+      const url = `${this.DISCOGRAPHY_URL}${band.id}/tab/all`;
+      const res = await this.http.get(url);
+      const $ = cheerio.load(res.data);
+      $('a').each((_, el) => {
+        const url = el.attribs.href;
+        if (!url.includes(`${this.BASE_URL}/albums`)) return;
+        promises.push(this.getAlbumData(el.attribs.href));
+      });
     }
 
     const albums = await Promise.all(promises);
@@ -149,21 +132,8 @@ export class ScrapeService {
     return band;
   }
 
-  private async getBandDiscography(bandID: string): Promise<string[]> {
-    const url = `${this.DISCOGRAPHY_URL}${bandID}/tab/all`;
-    const res = await this.client.get(url);
-    const $ = cheerio.load(res.data);
-    const albumLinks = [];
-    $('a').each((_, el) => {
-      const url = el.attribs.href;
-      if (!url.includes(`${this.BASE_URL}/albums`)) return;
-      albumLinks.push(el.attribs.href);
-    });
-    return albumLinks;
-  }
-
   private async getAlbumData(url: string) {
-    const res = await this.client.get(url);
+    const res = await this.http.get(url);
     const $ = cheerio.load(res.data);
     const album = new Album();
     album.id = this.MA_ID_PATTERN.exec(url)[0];
@@ -203,7 +173,7 @@ export class ScrapeService {
       else if (i === 1) song.title = this.normalize($(el).text());
       else if (i === 2) song.length = this.normalize($(el).text());
     });
-    const res = await this.client.get(`${this.LYRICS_URL}${song.id}`);
+    const res = await this.http.get(`${this.LYRICS_URL}${song.id}`);
     song.lyrics = this.normalize(res.data);
     return song;
   }
