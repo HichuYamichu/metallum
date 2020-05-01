@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
@@ -13,12 +14,14 @@ import (
 // Server main server struct
 type Server struct {
 	router *echo.Echo
+	db     *gorm.DB
 }
 
 // New bootstraps server
-func New() *Server {
+func New(db *gorm.DB) *Server {
 	server := &Server{
 		router: echo.New(),
+		db:     db,
 	}
 	server.configure()
 	server.setRoutes()

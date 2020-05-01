@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"sync"
 	"time"
 
-	"github.com/hichuyamichu/metallum/db"
+	"github.com/hichuyamichu/metallum/internal/db"
 	"github.com/hichuyamichu/metallum/pkg"
+	"github.com/hichuyamichu/metallum/internal/server"
 	"github.com/spf13/cobra"
 )
 
@@ -16,15 +16,9 @@ var updateCmd = &cobra.Command{
 	Args:      cobra.OnlyValidArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		today := time.Now()
-		wg := &sync.WaitGroup{}
-		for url := range pkg.GenerateBandsURLs(today, args[0]) {
-			wg.Add(1)
-			go func(url string) {
-				defer wg.Done()
-				band := pkg.ScrapeBand(url)
-				db.Instance.Save(band)
-			}(url)
-		}
-		wg.Wait()
+		kind, _ := pkg.KindFromString(args[0])
+		d := db.Connect()
+		s := server.New(d)
+		s.Update(today, kind)
 	},
 }

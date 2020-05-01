@@ -3,7 +3,6 @@ package cmd
 import (
 	"log"
 
-	"github.com/hichuyamichu/metallum/db"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -12,12 +11,6 @@ var (
 	rootCmd = &cobra.Command{
 		Use:   "metallum",
 		Short: "Scraping tool for metal-archives.com",
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			db.Connect()
-		},
-		PersistentPostRun: func(cmd *cobra.Command, args []string) {
-			db.Disconnect()
-		},
 	}
 )
 

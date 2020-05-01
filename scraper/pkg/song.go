@@ -1,4 +1,4 @@
-package models
+package pkg
 
 type Song struct {
 	ID      string `gorm:"primary_key"`

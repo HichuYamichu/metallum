@@ -1,9 +1,10 @@
 package pkg
 
 import (
+	"context"
 	"net/http"
 
-	"github.com/sethgrid/pester"
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 var client *Client
@@ -13,16 +14,19 @@ func init() {
 }
 
 type Client struct {
-	*pester.Client
+	*retryablehttp.Client
 }
 
 func NewClient() *Client {
-	return &Client{pester.New()}
+	retryClient := retryablehttp.NewClient()
+	retryClient.CheckRetry = retryPolicy
+	retryClient.RetryMax = 2147483647
+	retryClient.Logger = nil
+	return &Client{retryClient}
 }
 
 func (c *Client) Get(url string) (*http.Response, error) {
-	// fmt.Println(url)
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := retryablehttp.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -36,4 +40,16 @@ func (c *Client) Get(url string) (*http.Response, error) {
 		return nil, err
 	}
 	return res, nil
+}
+
+func retryPolicy(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	if ctx.Err() != nil {
+		return false, ctx.Err()
+	}
+
+	if resp.StatusCode != 200 {
+		return true, nil
+	}
+
+	return false, nil
 }

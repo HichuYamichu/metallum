@@ -8,7 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hichuyamichu/metallum/server"
+	"github.com/hichuyamichu/metallum/internal/db"
+
+	"github.com/hichuyamichu/metallum/internal/server"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -17,7 +19,8 @@ var listenCmd = &cobra.Command{
 	Use:   "listen",
 	Short: "Starts http server and listens for commands over network",
 	Run: func(cmd *cobra.Command, args []string) {
-		server := server.New()
+		d := db.Connect()
+		server := server.New(d)
 
 		go func() {
 			done := make(chan os.Signal, 1)

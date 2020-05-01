@@ -10,27 +10,97 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/hichuyamichu/metallum/models"
 )
-
-const baseURL = "https://www.metal-archives.com"
-const discographyPath = "/band/discography/id/"
-const lyricsPath = "/release/ajax-view-lyrics/id/"
-const listPath = "/archives/ajax-band-list/selection/"
 
 var maIDREGEXP = regexp.MustCompile(`([^\/]+$)`)
 
-func GenerateAllBandURLs() {
-
+type message struct {
+	ItemsCount int        `json:"iTotalDisplayRecords"`
+	Data       [][]string `json:"aaData"`
 }
 
-func GenerateBandsURLs(day time.Time, kind string) <-chan string {
+var alpha = []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "#", "~"}
+
+func PerLetterGenerate() []<-chan string {
+	chans := make([]<-chan string, len(alpha))
+	for _, letter := range alpha {
+		ch := make(chan string)
+		go perLetterGenerate(letter, ch)
+		chans = append(chans, ch)
+	}
+	return chans
+}
+
+func perLetterGenerate(letter string, ch chan string) {
+	defer close(ch)
+	url := fmt.Sprintf("%s/browse/ajax-letter/l/%s/json/1?sEcho=1", baseURL, letter)
+	res, err := client.Get(url)
+	if err != nil {
+		panic(err)
+	}
+	m := &message{}
+	json.NewDecoder(res.Body).Decode(m)
+	for i, sEcho := 0, 0; i < m.ItemsCount; i += 500 {
+		sEcho++
+		url := fmt.Sprintf("%s/browse/ajax-letter/l/%s/json/1?sEcho=%d&iDisplayStart=%d&iDisplayLength=500", baseURL, letter, sEcho, i)
+		res, err := client.Get(url)
+		if err != nil {
+			panic(err)
+		}
+		m := &message{}
+		json.NewDecoder(res.Body).Decode(m)
+		for _, dataSet := range m.Data {
+			doc, _ := goquery.NewDocumentFromReader(strings.NewReader(dataSet[0]))
+			link, _ := doc.Find("a").Attr("href")
+			ch <- link
+		}
+	}
+}
+
+func GenerateAllBandURLs() <-chan string {
+	ch := make(chan string)
+	go generateAllBandURLs(ch)
+	return ch
+}
+
+func generateAllBandURLs(ch chan string) {
+	defer close(ch)
+	sEcho := 0
+	for _, letter := range alpha {
+		sEcho++
+		url := fmt.Sprintf("%s/browse/ajax-letter/l/%s/json/1?sEcho=%d", baseURL, letter, sEcho)
+		res, err := client.Get(url)
+		if err != nil {
+			panic(err)
+		}
+		m := &message{}
+		json.NewDecoder(res.Body).Decode(m)
+		for i := 0; i < m.ItemsCount; i += 500 {
+			sEcho++
+			url := fmt.Sprintf("%s/browse/ajax-letter/l/%s/json/1?sEcho=%d&iDisplayStart=%d&iDisplayLength=500", baseURL, letter, sEcho, i)
+			res, err := client.Get(url)
+			if err != nil {
+				panic(err)
+			}
+			m := &message{}
+			json.NewDecoder(res.Body).Decode(m)
+			for _, dataSet := range m.Data {
+				doc, _ := goquery.NewDocumentFromReader(strings.NewReader(dataSet[0]))
+				link, _ := doc.Find("a").Attr("href")
+				ch <- link
+			}
+		}
+	}
+}
+
+// GenerateBandsURLs produces URLs of bands updated or added during provided day.
+func GenerateBandsURLs(day time.Time, kind Kind) <-chan string {
 	ch := make(chan string)
 	go generateBandsURLs(day, kind, 0, ch)
 	return ch
 }
 
-func generateBandsURLs(day time.Time, kind string, page int, ch chan string) {
+func generateBandsURLs(day time.Time, kind Kind, page int, ch chan string) {
 	defer close(ch)
 	pathFragment := day.Format("2006-01")
 	params := fmt.Sprintf("sEcho=%d&sSortDir_0=desc&iDisplayStart=%d", page+1, page*200)
@@ -40,9 +110,6 @@ func generateBandsURLs(day time.Time, kind string, page int, ch chan string) {
 		panic(err)
 	}
 
-	type message struct {
-		Data [][]string `json:"aaData"`
-	}
 	m := &message{}
 	json.NewDecoder(res.Body).Decode(m)
 
@@ -65,7 +132,8 @@ func generateBandsURLs(day time.Time, kind string, page int, ch chan string) {
 	}
 }
 
-func ScrapeBand(url string) *models.Band {
+// ScrapeBand scrapes band data along with albums and songs
+func ScrapeBand(url string) *Band {
 	res, err := client.Get(url)
 	if err != nil {
 		panic(err)
@@ -75,8 +143,10 @@ func ScrapeBand(url string) *models.Band {
 	if err != nil {
 		panic(err)
 	}
-	band := &models.Band{}
+	band := &Band{}
 	band.ID = maIDREGEXP.FindString(url)
+	descCh := make(chan *string)
+	go scrapeBandDesc(descCh, band.ID)
 	band.Name = normalize(doc.Find(".band_name").Text())
 	doc.Find("dd").Each(func(i int, s *goquery.Selection) {
 		if i == 0 {
@@ -97,16 +167,16 @@ func ScrapeBand(url string) *models.Band {
 	})
 
 	discographyURL := fmt.Sprintf("%s%s%s/tab/all", baseURL, discographyPath, band.ID)
-	res, err = client.Get(discographyURL)
+	discoRes, err := client.Get(discographyURL)
 	if err != nil {
 		panic(err)
 	}
-	defer res.Body.Close()
+	defer discoRes.Body.Close()
 
 	albumsWG := &sync.WaitGroup{}
-	albumsCh := make(chan models.Album)
+	albumsCh := make(chan Album)
 
-	doc, _ = goquery.NewDocumentFromReader(res.Body)
+	doc, _ = goquery.NewDocumentFromReader(discoRes.Body)
 	doc.Find("a").Each(func(i int, s *goquery.Selection) {
 		link, _ := s.Attr("href")
 		if !strings.Contains(link, fmt.Sprintf("%s/albums", baseURL)) {
@@ -128,18 +198,34 @@ func ScrapeBand(url string) *models.Band {
 	for album := range albumsCh {
 		band.Albums = append(band.Albums, album)
 	}
+	band.Description = <-descCh
 
 	return band
 }
 
-func ScrapeAlbum(url string) *models.Album {
+func scrapeBandDesc(descCh chan *string, id string) {
+	descURL := fmt.Sprintf("%s%s%s/tab/all", baseURL, descPath, id)
+	descRes, err := client.Get(descURL)
+	if err != nil {
+		panic(err)
+	}
+	defer descRes.Body.Close()
+	responseData, err := ioutil.ReadAll(descRes.Body)
+	if err != nil {
+		panic(err)
+	}
+	descCh <- normalize(string(responseData))
+}
+
+// ScrapeAlbum scrapes album along with songs
+func ScrapeAlbum(url string) *Album {
 	res, err := client.Get(url)
 	if err != nil {
 		panic(err)
 	}
 	defer res.Body.Close()
 	doc, _ := goquery.NewDocumentFromReader(res.Body)
-	album := &models.Album{}
+	album := &Album{}
 	album.ID = maIDREGEXP.FindString(url)
 	album.Name = normalize(doc.Find("h1.album_name a").Text())
 	doc.Find("dd").Each(func(i int, s *goquery.Selection) {
@@ -159,7 +245,7 @@ func ScrapeAlbum(url string) *models.Album {
 		Length() - 1
 
 	songsWG := &sync.WaitGroup{}
-	songsCh := make(chan models.Song)
+	songsCh := make(chan Song)
 
 	doc.Find("table.table_lyrics tr.odd, table.table_lyrics tr.even").
 		Not(".displayNone").
@@ -189,8 +275,9 @@ func ScrapeAlbum(url string) *models.Album {
 	return album
 }
 
-func ScrapeSong(s *goquery.Selection) *models.Song {
-	song := &models.Song{}
+// ScrapeSong scrapes song
+func ScrapeSong(s *goquery.Selection) *Song {
+	song := &Song{}
 	s.Find("td").Each(func(i int, s *goquery.Selection) {
 		if i == 0 {
 			nameAttr, _ := s.Find("a").Attr("name")
@@ -217,13 +304,15 @@ func ScrapeSong(s *goquery.Selection) *models.Song {
 
 func normalize(s string) *string {
 	s = strings.Trim(s, "\t \n")
-	s = regexp.MustCompile(`/<\/?[^>]+>/gi`).ReplaceAllString(s, "")
-	s = regexp.MustCompile(`/\s{2,}/g`).ReplaceAllString(s, "")
+	s = regexp.MustCompile(`(?mi)<\/?[^>]+>`).ReplaceAllString(s, "")
+	s = regexp.MustCompile(`(?mi)\s{2,}`).ReplaceAllString(s, "")
 	if s == "N/A" {
 		return nil
 	} else if s == "(lyrics not available)" {
 		return nil
 	} else if s == "(Instrumental)" {
+		return nil
+	} else if s == "''" || s == "\"\"" {
 		return nil
 	}
 	return &s

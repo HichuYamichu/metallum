@@ -8,9 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var Instance *gorm.DB
-
-func Connect() error {
+func Connect() *gorm.DB {
 	dbHost := viper.GetString("db.host")
 	dbPort := viper.GetString("db.port")
 	dbUser := viper.GetString("db.user")
@@ -32,13 +30,9 @@ func Connect() error {
 	}
 	var err error
 
-	Instance, err = gorm.Open(dbType, connStr)
+	db, err := gorm.Open(dbType, connStr)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	return nil
-}
-
-func Disconnect() error {
-	return Instance.Close()
+	return db
 }

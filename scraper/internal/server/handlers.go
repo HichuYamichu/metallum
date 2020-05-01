@@ -1,11 +1,8 @@
 package server
 
 import (
-	"sync"
 	"time"
 
-	"github.com/hichuyamichu/metallum/db"
-	"github.com/hichuyamichu/metallum/models"
 	"github.com/hichuyamichu/metallum/pkg"
 	"github.com/labstack/echo/v4"
 )
@@ -22,20 +19,16 @@ func (s *Server) CommandHandler(c echo.Context) error {
 
 	switch cmd.Name {
 	case "migrate":
-		db.Instance.AutoMigrate(&models.Band{}, &models.Album{}, &models.Song{})
+		s.db.AutoMigrate(&pkg.Band{}, &pkg.Album{}, &pkg.Song{})
 	case "full":
+		s.Full()
 	case "update":
 		today := time.Now()
-		wg := &sync.WaitGroup{}
-		for url := range pkg.GenerateBandsURLs(today, cmd.Args[0]) {
-			wg.Add(1)
-			go func(url string) {
-				defer wg.Done()
-				band := pkg.ScrapeBand(url)
-				db.Instance.Save(band)
-			}(url)
+		kind, err := pkg.KindFromString(cmd.Args[0])
+		if err != nil {
+			return err
 		}
-		wg.Wait()
+		s.Update(today, kind)
 	}
 
 	return nil
