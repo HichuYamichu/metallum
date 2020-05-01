@@ -20,6 +20,44 @@ type message struct {
 
 var alpha = []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "#", "~"}
 
+func PerLetterGenerate() []<-chan string {
+	chans := make([]<-chan string, len(alpha))
+	for _, letter := range alpha {
+		ch := make(chan string)
+		go perLetterGenerate(letter, ch)
+		chans = append(chans, ch)
+	}
+	return chans
+}
+
+func perLetterGenerate(letter string, ch chan string) {
+	defer close(ch)
+	url := fmt.Sprintf("%s/browse/ajax-letter/l/%s/json/1?sEcho=1", baseURL, letter)
+	res, err := client.Get(url)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+	m := &message{}
+	json.NewDecoder(res.Body).Decode(m)
+	for i, sEcho := 0, 0; i < m.ItemsCount; i += 500 {
+		sEcho++
+		url := fmt.Sprintf("%s/browse/ajax-letter/l/%s/json/1?sEcho=%d&iDisplayStart=%d&iDisplayLength=500", baseURL, letter, sEcho, i)
+		res, err := client.Get(url)
+		if err != nil {
+			panic(err)
+		}
+		defer res.Body.Close()
+		m := &message{}
+		json.NewDecoder(res.Body).Decode(m)
+		for _, dataSet := range m.Data {
+			doc, _ := goquery.NewDocumentFromReader(strings.NewReader(dataSet[0]))
+			link, _ := doc.Find("a").Attr("href")
+			ch <- link
+		}
+	}
+}
+
 func GenerateAllBandURLs() <-chan string {
 	ch := make(chan string)
 	go generateAllBandURLs(ch)
@@ -111,6 +149,8 @@ func ScrapeBand(url string) (*Band, error) {
 	}
 	band := &Band{}
 	band.ID = maIDREGEXP.FindString(url)
+	descCh := make(chan *string)
+	go scrapeBandDesc(descCh, band.ID)
 	band.Name = normalize(doc.Find(".band_name").Text())
 	doc.Find("dd").Each(func(i int, s *goquery.Selection) {
 		if i == 0 {

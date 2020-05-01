@@ -3,7 +3,6 @@ package pkg
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
 )
@@ -21,7 +20,6 @@ type Client struct {
 func NewClient() *Client {
 	retryClient := retryablehttp.NewClient()
 	retryClient.CheckRetry = retryPolicy
-	retryClient.RetryWaitMax = 3 * time.Minute
 	retryClient.RetryMax = 2147483647
 	retryClient.Logger = nil
 	return &Client{retryClient}

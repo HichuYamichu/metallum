@@ -1,47 +1,37 @@
 import { NotFoundException } from '@nestjs/common';
-import { Args, Query, Resolver, ResolveField, Root } from '@nestjs/graphql';
+import { Args, Query, Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { Band } from './band.entity';
-import { AlbumService } from '../album/album.service';
 import { BandService } from './band.service';
 import { Album } from '../album/album.entity';
 import { FindArgs } from '../common/dto/find.args';
-import { BandInput } from './dto/band.args';
-import { AlbumInput } from '../album/dto/album.dto';
 
 @Resolver(of => Band)
 export class BandResolver {
-  public constructor(
-    private readonly bandService: BandService,
-    private readonly albumService: AlbumService
-  ) {}
+  public constructor(private readonly bandService: BandService) {}
 
   @Query(returns => Band, { name: 'band' })
-  public async band(@Args('id') id: string) {
+  public async band(@Args('id') id: string): Promise<Band> {
     const band = await this.bandService.findOneById(id);
     if (!band) {
-      throw new NotFoundException(`band with id: ${id} does not exist`);
+      throw new NotFoundException(id);
     }
     return band;
   }
 
-  @Query(returns => [Band], { name: 'bands' })
-  public bands(
-    @Args('where', { defaultValue: new BandInput() }) bandInput: BandInput,
-    @Args() findArgs: FindArgs
-  ) {
-    return this.bandService.findWhere(bandInput, findArgs.skip, findArgs.take);
+  @ResolveField('albums', () => [Album])
+  public async getAlbums(@Parent() band: Band): Promise<Album[]> {
+    const { id } = band;
+    const { albums } = await this.bandService.findOneWithAlbums(id);
+    return albums;
   }
 
-  @ResolveField('albums', () => [Album])
-  public resolveAlbums(
-    @Root() band: Band,
-    @Args('where', { defaultValue: new AlbumInput() }) albumInput: AlbumInput,
-    @Args() findArgs: FindArgs
-  ) {
-    return this.albumService.findWhere(
-      { bandID: band.id, ...albumInput },
-      findArgs.skip,
-      findArgs.take
-    );
+  @Query(returns => [Band], { name: 'bands' })
+  public bands(@Args() bandsArgs?: FindArgs): Promise<Band[]> {
+    return this.bandService.findWithSkipAndTake(bandsArgs.skip, bandsArgs.take);
+  }
+
+  @Query(returns => [Band], { name: 'searchBand' })
+  public search(@Args('query') query: string): Promise<Band[]> {
+    return this.bandService.search(query);
   }
 }

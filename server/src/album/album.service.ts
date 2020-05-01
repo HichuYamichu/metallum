@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Album } from './album.entity';
-import { AlbumInput } from './dto/album.dto';
 
 @Injectable()
 export class AlbumService {
@@ -11,11 +10,29 @@ export class AlbumService {
     private readonly albumRepository: Repository<Album>
   ) {}
 
-  public findOneById(id: string) {
+  public async findOneById(id: string) {
     return this.albumRepository.findOne(id);
   }
 
-  public findWhere(where: AlbumInput, skip: number, take: number) {
-    return this.albumRepository.find({ skip, take, where: { ...where } });
+  public async findOneWithSongs(id: string) {
+    return this.albumRepository.findOne(id, { relations: ['songs'] });
+  }
+
+  public async findOneWithBand(id: string) {
+    return this.albumRepository.findOne(id, { relations: ['band'] });
+  }
+
+  public async findWithSkipAndTake(skip: number, take: number) {
+    return this.albumRepository.find({ skip, take });
+  }
+
+  public async search(query: string) {
+    return this.albumRepository
+      .createQueryBuilder()
+      .select()
+      .where('album_tsvector @@ plainto_tsquery(:query)', { query })
+      .orderBy('ts_rank(album_tsvector, plainto_tsquery(:query))', 'DESC')
+      .limit(25)
+      .getMany();
   }
 }
