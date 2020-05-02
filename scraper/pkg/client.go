@@ -3,6 +3,7 @@ package pkg
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
 )
@@ -20,6 +21,7 @@ type Client struct {
 func NewClient() *Client {
 	retryClient := retryablehttp.NewClient()
 	retryClient.CheckRetry = retryPolicy
+	retryClient.RetryWaitMax = 3 * time.Minute
 	retryClient.RetryMax = 2147483647
 	retryClient.Logger = nil
 	return &Client{retryClient}
@@ -43,13 +45,12 @@ func (c *Client) Get(url string) (*http.Response, error) {
 }
 
 func retryPolicy(ctx context.Context, resp *http.Response, err error) (bool, error) {
-	if ctx.Err() != nil {
-		return false, ctx.Err()
+	if err != nil {
+		return true, nil
 	}
 
 	if resp.StatusCode != 200 {
 		return true, nil
 	}
-
 	return false, nil
 }

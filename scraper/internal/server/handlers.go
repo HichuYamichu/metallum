@@ -21,14 +21,14 @@ func (s *Server) CommandHandler(c echo.Context) error {
 	case "migrate":
 		s.db.AutoMigrate(&pkg.Band{}, &pkg.Album{}, &pkg.Song{})
 	case "full":
-		s.Full()
+		go s.Full()
 	case "update":
 		today := time.Now()
 		kind, err := pkg.KindFromString(cmd.Args[0])
 		if err != nil {
 			return err
 		}
-		s.Update(today, kind)
+		go s.Update(today, kind)
 	}
 
 	return nil

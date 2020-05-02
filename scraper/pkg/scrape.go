@@ -38,6 +38,7 @@ func perLetterGenerate(letter string, ch chan string) {
 	if err != nil {
 		panic(err)
 	}
+	defer res.Body.Close()
 	m := &message{}
 	json.NewDecoder(res.Body).Decode(m)
 	for i, sEcho := 0, 0; i < m.ItemsCount; i += 500 {
@@ -47,6 +48,7 @@ func perLetterGenerate(letter string, ch chan string) {
 		if err != nil {
 			panic(err)
 		}
+		defer res.Body.Close()
 		m := &message{}
 		json.NewDecoder(res.Body).Decode(m)
 		for _, dataSet := range m.Data {
@@ -73,12 +75,14 @@ func generateAllBandURLs(ch chan string) {
 		if err != nil {
 			panic(err)
 		}
+		defer res.Body.Close()
 		m := &message{}
 		json.NewDecoder(res.Body).Decode(m)
 		for i := 0; i < m.ItemsCount; i += 500 {
 			sEcho++
 			url := fmt.Sprintf("%s/browse/ajax-letter/l/%s/json/1?sEcho=%d&iDisplayStart=%d&iDisplayLength=500", baseURL, letter, sEcho, i)
 			res, err := client.Get(url)
+			defer res.Body.Close()
 			if err != nil {
 				panic(err)
 			}
@@ -109,6 +113,7 @@ func generateBandsURLs(day time.Time, kind Kind, page int, ch chan string) {
 	if err != nil {
 		panic(err)
 	}
+	defer res.Body.Close()
 
 	m := &message{}
 	json.NewDecoder(res.Body).Decode(m)
@@ -133,20 +138,18 @@ func generateBandsURLs(day time.Time, kind Kind, page int, ch chan string) {
 }
 
 // ScrapeBand scrapes band data along with albums and songs
-func ScrapeBand(url string) *Band {
+func ScrapeBand(url string) (*Band, error) {
 	res, err := client.Get(url)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer res.Body.Close()
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	band := &Band{}
 	band.ID = maIDREGEXP.FindString(url)
-	descCh := make(chan *string)
-	go scrapeBandDesc(descCh, band.ID)
 	band.Name = normalize(doc.Find(".band_name").Text())
 	doc.Find("dd").Each(func(i int, s *goquery.Selection) {
 		if i == 0 {
@@ -169,7 +172,7 @@ func ScrapeBand(url string) *Band {
 	discographyURL := fmt.Sprintf("%s%s%s/tab/all", baseURL, discographyPath, band.ID)
 	discoRes, err := client.Get(discographyURL)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer discoRes.Body.Close()
 
@@ -185,7 +188,7 @@ func ScrapeBand(url string) *Band {
 		albumsWG.Add(1)
 		go func() {
 			defer albumsWG.Done()
-			album := ScrapeAlbum(link)
+			album, _ := ScrapeAlbum(link)
 			albumsCh <- *album
 		}()
 	})
@@ -198,30 +201,27 @@ func ScrapeBand(url string) *Band {
 	for album := range albumsCh {
 		band.Albums = append(band.Albums, album)
 	}
-	band.Description = <-descCh
 
-	return band
-}
-
-func scrapeBandDesc(descCh chan *string, id string) {
-	descURL := fmt.Sprintf("%s%s%s/tab/all", baseURL, descPath, id)
+	descURL := fmt.Sprintf("%s%s%s", baseURL, descPath, band.ID)
 	descRes, err := client.Get(descURL)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer descRes.Body.Close()
 	responseData, err := ioutil.ReadAll(descRes.Body)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	descCh <- normalize(string(responseData))
+	band.Description = normalize(string(responseData))
+
+	return band, nil
 }
 
 // ScrapeAlbum scrapes album along with songs
-func ScrapeAlbum(url string) *Album {
+func ScrapeAlbum(url string) (*Album, error) {
 	res, err := client.Get(url)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer res.Body.Close()
 	doc, _ := goquery.NewDocumentFromReader(res.Body)
@@ -258,7 +258,7 @@ func ScrapeAlbum(url string) *Album {
 			songsWG.Add(1)
 			go func() {
 				defer songsWG.Done()
-				song := ScrapeSong(s)
+				song, _ := ScrapeSong(s)
 				songsCh <- *song
 			}()
 		})
@@ -272,11 +272,11 @@ func ScrapeAlbum(url string) *Album {
 		album.Songs = append(album.Songs, song)
 	}
 
-	return album
+	return album, nil
 }
 
 // ScrapeSong scrapes song
-func ScrapeSong(s *goquery.Selection) *Song {
+func ScrapeSong(s *goquery.Selection) (*Song, error) {
 	song := &Song{}
 	s.Find("td").Each(func(i int, s *goquery.Selection) {
 		if i == 0 {
@@ -290,16 +290,16 @@ func ScrapeSong(s *goquery.Selection) *Song {
 	})
 	res, err := client.Get(fmt.Sprintf("%s%s%s", baseURL, lyricsPath, song.ID))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
+	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	txt := string(body)
-	song.Lyrics = &txt
+	song.Lyrics = normalize(string(body))
 
-	return song
+	return song, nil
 }
 
 func normalize(s string) *string {

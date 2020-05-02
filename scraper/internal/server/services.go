@@ -15,7 +15,7 @@ func (s *Server) Full() {
 		c++
 		go func(url string) {
 			defer wg.Done()
-			band := pkg.ScrapeBand(url)
+			band, _ := pkg.ScrapeBand(url)
 			s.db.Save(band)
 		}(url)
 		if c >= 50 {
@@ -32,7 +32,7 @@ func (s *Server) Update(day time.Time, kind pkg.Kind) {
 		wg.Add(1)
 		go func(url string) {
 			defer wg.Done()
-			band := pkg.ScrapeBand(url)
+			band, _ := pkg.ScrapeBand(url)
 			s.db.Save(band)
 		}(url)
 	}
