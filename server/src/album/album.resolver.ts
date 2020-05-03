@@ -1,36 +1,38 @@
 import { NotFoundException } from '@nestjs/common';
 import { Args, Query, Resolver, ResolveField, Parent } from '@nestjs/graphql';
 import { Album } from './album.entity';
+import { BandService } from '../band/band.service';
 import { AlbumService } from './album.service';
+import { SongService } from '../song/song.service';
 import { Song } from '../song/song.entity';
 import { Band } from '../band/band.entity';
 import { FindArgs } from '../common/dto/find.args';
 
 @Resolver(of => Album)
 export class AlbumResolver {
-  public constructor(private readonly albumService: AlbumService) {}
+  public constructor(
+    private readonly bandService: BandService,
+    private readonly albumService: AlbumService,
+    private readonly songService: SongService
+  ) {}
 
   @Query(returns => Album, { name: 'album' })
   public async album(@Args('id') id: string): Promise<Album> {
     const album = await this.albumService.findOneById(id);
     if (!album) {
-      throw new NotFoundException(id);
+      throw new NotFoundException(`album with id: ${id} does not exist`);
     }
     return album;
   }
 
   @ResolveField('songs', () => [Song])
-  public async getSongs(@Parent() album: Album): Promise<Song[]> {
-    const { id } = album;
-    const { songs } = await this.albumService.findOneWithSongs(id);
-    return songs;
+  public getSongs(@Parent() album: Album): Promise<Song[]> {
+    return this.songService.findByAlbumID(album.id);
   }
 
   @ResolveField('band', () => Band)
   public async getBand(@Parent() album: Album): Promise<Band> {
-    const { id } = album;
-    const { band } = await this.albumService.findOneWithBand(id);
-    return band;
+    return this.bandService.findOneById(album.bandID);
   }
 
   @Query(returns => [Album], { name: 'albums' })
@@ -39,10 +41,5 @@ export class AlbumResolver {
       albumArgs.skip,
       albumArgs.take
     );
-  }
-
-  @Query(returns => [Album], { name: 'searchAlbum' })
-  public search(@Args('query') query: string): Promise<Album[]> {
-    return this.albumService.search(query);
   }
 }

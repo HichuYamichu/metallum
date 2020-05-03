@@ -24,13 +24,13 @@ import { TasksModule } from './tasks/tasks.module';
         password: configService.get('DATABASE_PASS', 'postgres'),
         database: configService.get('DATABASE_SCHEMA', 'metallum'),
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-        synchronize: true
+        synchronize: false
       })
     }),
     GraphQLModule.forRoot({
       playground: true,
       autoSchemaFile: true,
-      context: ({ req }) => ({ req })
+      debug: true
     }),
     BandModule,
     AlbumModule,

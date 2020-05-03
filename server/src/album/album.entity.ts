@@ -6,7 +6,7 @@ import {
   ManyToOne,
   JoinColumn
 } from 'typeorm';
-import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { Song } from '../song/song.entity';
 import { Band } from '../band/band.entity';
 
@@ -14,7 +14,7 @@ import { Band } from '../band/band.entity';
 @ObjectType()
 export class Album {
   @PrimaryColumn({ type: 'character varying' })
-  @Field(type => ID)
+  @Field()
   public id: string;
 
   @Column()
@@ -23,21 +23,24 @@ export class Album {
 
   @Column({ nullable: true })
   @Field({ nullable: true })
-  public type: string;
+  public type?: string;
 
   @Column({ nullable: true })
   @Field({ nullable: true })
-  public release: string;
+  public release?: string;
 
   @Column({ nullable: true })
   @Field({ nullable: true })
   public catalog?: string;
 
-  @OneToMany(type => Song, song => song.album, { cascade: true })
+  @OneToMany(type => Song, song => song.album)
   @Field(type => [Song])
   public songs: Song[];
 
-  @ManyToOne(type => Band, band => band.albums, { onDelete: 'CASCADE' })
+  @Column({ name: 'band_id' })
+  bandID: string;
+
+  @ManyToOne(type => Band, band => band.albums)
   @JoinColumn({ name: 'band_id' })
   @Field(type => Band)
   public band: Band;

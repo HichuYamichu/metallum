@@ -6,7 +6,7 @@ import { Album } from '../album/album.entity';
 @ObjectType()
 export class Song {
   @PrimaryColumn({ type: 'character varying' })
-  @Field(type => ID)
+  @Field()
   public id: string;
 
   @Column()
@@ -21,7 +21,10 @@ export class Song {
   @Field({ nullable: true })
   public lyrics?: string;
 
-  @ManyToOne(type => Album, album => album.songs, { onDelete: 'CASCADE' })
+  @Column({ name: 'album_id' })
+  albumID: string;
+
+  @ManyToOne(type => Album, album => album.songs)
   @JoinColumn({ name: 'album_id' })
   @Field(type => Album)
   public album: Album;

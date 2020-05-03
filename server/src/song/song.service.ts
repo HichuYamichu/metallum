@@ -10,25 +10,19 @@ export class SongService {
     private readonly songRepository: Repository<Song>
   ) {}
 
-  public async findOneByID(id: string) {
+  public findOneByID(id: string) {
     return this.songRepository.findOne(id);
   }
 
-  public async findOneWithAlbum(id: string) {
-    return this.songRepository.findOne(id, { relations: ['album'] });
+  public findByAlbumID(id: string) {
+    return this.songRepository
+      .createQueryBuilder('song')
+      .select()
+      .where('song.album_id = :id', { id })
+      .getMany();
   }
 
   public async findWithSkipAndTake(skip: number, take: number) {
     return this.songRepository.find({ skip, take });
-  }
-
-  public async search(query: string) {
-    return this.songRepository
-      .createQueryBuilder()
-      .select()
-      .where('song_tsvector @@ plainto_tsquery(:query)', { query })
-      .orderBy('ts_rank(song_tsvector, plainto_tsquery(:query))', 'DESC')
-      .limit(25)
-      .getMany();
   }
 }

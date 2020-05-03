@@ -14,8 +14,12 @@ export class AlbumService {
     return this.albumRepository.findOne(id);
   }
 
-  public async findOneWithSongs(id: string) {
-    return this.albumRepository.findOne(id, { relations: ['songs'] });
+  public findByBandID(id: string) {
+    return this.albumRepository
+      .createQueryBuilder('album')
+      .select()
+      .where('album.band_id = :id', { id })
+      .getMany();
   }
 
   public async findOneWithBand(id: string) {
@@ -24,15 +28,5 @@ export class AlbumService {
 
   public async findWithSkipAndTake(skip: number, take: number) {
     return this.albumRepository.find({ skip, take });
-  }
-
-  public async search(query: string) {
-    return this.albumRepository
-      .createQueryBuilder()
-      .select()
-      .where('album_tsvector @@ plainto_tsquery(:query)', { query })
-      .orderBy('ts_rank(album_tsvector, plainto_tsquery(:query))', 'DESC')
-      .limit(25)
-      .getMany();
   }
 }

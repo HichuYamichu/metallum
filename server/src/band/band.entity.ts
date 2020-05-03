@@ -6,7 +6,7 @@ import { Album } from '../album/album.entity';
 @ObjectType()
 export class Band {
   @PrimaryColumn({ type: 'character varying' })
-  @Field(type => ID)
+  @Field()
   public id: string;
 
   @Column()
@@ -15,7 +15,11 @@ export class Band {
 
   @Column({ nullable: true })
   @Field({ nullable: true })
-  public country: string;
+  public description?: string;
+
+  @Column({ nullable: true })
+  @Field({ nullable: true })
+  public country?: string;
 
   @Column({ nullable: true })
   @Field({ nullable: true })
@@ -27,11 +31,11 @@ export class Band {
 
   @Column({ nullable: true })
   @Field({ nullable: true })
-  public status: string;
+  public status?: string;
 
   @Column({ nullable: true })
   @Field({ nullable: true })
-  public genre: string;
+  public genre?: string;
 
   @Column({ nullable: true })
   @Field({ nullable: true })
@@ -41,10 +45,7 @@ export class Band {
   @Field({ nullable: true })
   public active?: string;
 
-  @OneToMany(type => Album, album => album.band, {
-    cascade: true,
-    onDelete: 'CASCADE'
-  })
+  @OneToMany(type => Album, album => album.band)
   @Field(type => [Album])
   public albums: Album[];
 
