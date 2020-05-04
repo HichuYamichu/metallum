@@ -227,7 +227,7 @@ func ScrapeAlbum(url string) (*Album, error) {
 	doc, _ := goquery.NewDocumentFromReader(res.Body)
 	album := &Album{}
 	album.ID = maIDREGEXP.FindString(url)
-	album.Name = normalize(doc.Find("h1.album_name a").Text())
+	album.Title = normalize(doc.Find("h1.album_name a").Text())
 	doc.Find("dd").Each(func(i int, s *goquery.Selection) {
 		if i == 0 {
 			album.Type = normalize(s.Text())

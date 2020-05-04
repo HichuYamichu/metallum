@@ -2,7 +2,7 @@ package pkg
 
 type Album struct {
 	ID      string `gorm:"primary_key"`
-	Name    *string
+	Title   *string
 	Type    *string
 	Release *string
 	Catalog *string

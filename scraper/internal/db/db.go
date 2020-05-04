@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
@@ -15,22 +14,8 @@ func Connect() *gorm.DB {
 	dbName := viper.GetString("db.name")
 	dbPass := viper.GetString("db.pass")
 
-	dbType := strings.ToLower(viper.GetString("db.type"))
-	var connStr string
-	switch dbType {
-	case "postgres":
-		connStr = fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable", dbHost, dbPort, dbUser, dbName, dbPass)
-	case "mysql":
-		connStr = fmt.Sprintf("%s:%s@(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", dbUser, dbPass, dbHost, dbPort, dbName)
-	case "mssql":
-		connStr = fmt.Sprintf("sqlserver://%s:%s@%s:%s?database=%s", dbUser, dbPass, dbHost, dbPort, dbName)
-	default:
-		dbType = "sqlite3"
-		connStr = "./metallum.db"
-	}
-	var err error
-
-	db, err := gorm.Open(dbType, connStr)
+	connStr := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable", dbHost, dbPort, dbUser, dbName, dbPass)
+	db, err := gorm.Open("postgres", connStr)
 	if err != nil {
 		panic(err)
 	}
