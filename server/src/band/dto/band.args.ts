@@ -1,8 +1,7 @@
-import { Max, Min } from 'class-validator';
-import { ArgsType, Field, Int } from '@nestjs/graphql';
+import { InputType, Field } from '@nestjs/graphql';
 
-@ArgsType()
-export class BandArgs {
+@InputType()
+export class BandInput {
   @Field({ nullable: true })
   public name: string;
 

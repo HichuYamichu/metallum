@@ -22,7 +22,8 @@
     "inlineSourceMap": true,
     "inlineSources": true,
     "sourceRoot": "./",
-    "importHelpers": true
+    "importHelpers": true,
+    "skipLibCheck": true
   },
   "exclude": ["node_modules", "dist"]
 }

@@ -1,11 +1,12 @@
 import { NotFoundException } from '@nestjs/common';
-import { Args, Query, Resolver, ResolveField, Parent } from '@nestjs/graphql';
+import { Args, Query, Resolver, ResolveField, Root } from '@nestjs/graphql';
 import { Band } from './band.entity';
 import { AlbumService } from '../album/album.service';
 import { BandService } from './band.service';
 import { Album } from '../album/album.entity';
 import { FindArgs } from '../common/dto/find.args';
-import { BandArgs } from './dto/band.args';
+import { BandInput } from './dto/band.args';
+import { AlbumInput } from '../album/dto/album.dto';
 
 @Resolver(of => Band)
 export class BandResolver {
@@ -15,7 +16,7 @@ export class BandResolver {
   ) {}
 
   @Query(returns => Band, { name: 'band' })
-  public async band(@Args('id') id: string): Promise<Band> {
+  public async band(@Args('id') id: string) {
     const band = await this.bandService.findOneById(id);
     if (!band) {
       throw new NotFoundException(`band with id: ${id} does not exist`);
@@ -24,17 +25,23 @@ export class BandResolver {
   }
 
   @Query(returns => [Band], { name: 'bands' })
-  public bands(@Args() bandsArgs?: FindArgs): Promise<Band[]> {
-    return this.bandService.findWithSkipAndTake(bandsArgs.skip, bandsArgs.take);
-  }
-
-  @Query(returns => [Band], { name: 'bandWhere' })
-  public search(@Args() bandArgs: BandArgs): Promise<Band[]> {
-    return this.bandService.findWhere(bandArgs);
+  public bands(
+    @Args('where', { defaultValue: new BandInput() }) bandInput: BandInput,
+    @Args() findArgs: FindArgs
+  ) {
+    return this.bandService.findWhere(bandInput, findArgs.skip, findArgs.take);
   }
 
   @ResolveField('albums', () => [Album])
-  public getAlbums(@Parent() band: Band): Promise<Album[]> {
-    return this.albumService.findByBandID(band.id);
+  public resolveAlbums(
+    @Root() band: Band,
+    @Args('where', { defaultValue: new AlbumInput() }) albumInput: AlbumInput,
+    @Args() findArgs: FindArgs
+  ) {
+    return this.albumService.findWhere(
+      { bandID: band.id, ...albumInput },
+      findArgs.skip,
+      findArgs.take
+    );
   }
 }
