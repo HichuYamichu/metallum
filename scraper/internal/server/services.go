@@ -17,6 +17,14 @@ func (s *Server) Full() {
 			defer wg.Done()
 			band, _ := pkg.ScrapeBand(url)
 			s.db.Save(band)
+			for _, album := range band.Albums {
+				album := album
+				s.db.Save(&album)
+				for _, song := range album.Songs {
+					song := song
+					s.db.Save(&song)
+				}
+			}
 		}(url)
 		if c >= 50 {
 			wg.Wait()
@@ -34,6 +42,14 @@ func (s *Server) Update(day time.Time, kind pkg.Kind) {
 			defer wg.Done()
 			band, _ := pkg.ScrapeBand(url)
 			s.db.Save(band)
+			for _, album := range band.Albums {
+				album := album
+				s.db.Save(&album)
+				for _, song := range album.Songs {
+					song := song
+					s.db.Save(&song)
+				}
+			}
 		}(url)
 	}
 	wg.Wait()
