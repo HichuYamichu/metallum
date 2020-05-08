@@ -1,6 +1,7 @@
 import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { Album } from '../album/album.entity';
+import { ApiHideProperty } from '@nestjs/swagger';
 
 @Entity()
 @ObjectType()
@@ -27,8 +28,10 @@ export class Song {
   @ManyToOne(type => Album, album => album.songs)
   @JoinColumn({ name: 'album_id' })
   @Field(type => Album)
+  @ApiHideProperty()
   public album: Album;
 
   @Column('tsvector', { select: false, name: 'song_tsvector', nullable: true })
+  @ApiHideProperty()
   public songTSVector: any;
 }

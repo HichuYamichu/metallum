@@ -1,6 +1,7 @@
 import { Entity, Column, OneToMany, PrimaryColumn } from 'typeorm';
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Album } from '../album/album.entity';
+import { ApiHideProperty } from '@nestjs/swagger';
 
 @Entity()
 @ObjectType()
@@ -47,8 +48,10 @@ export class Band {
 
   @OneToMany(type => Album, album => album.band)
   @Field(type => [Album])
+  @ApiHideProperty()
   public albums: Album[];
 
   @Column('tsvector', { select: false, name: 'band_tsvector', nullable: true })
+  @ApiHideProperty()
   public bandTSVector: any;
 }
