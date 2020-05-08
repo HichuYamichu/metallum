@@ -11,20 +11,8 @@ export class SongService {
     private readonly songRepository: Repository<Song>
   ) {}
 
-  public findOneByID(id: string) {
+  public findOneById(id: string) {
     return this.songRepository.findOne(id);
-  }
-
-  public findByAlbumID(id: string) {
-    return this.songRepository
-      .createQueryBuilder('song')
-      .select()
-      .where('song.album_id = :id', { id })
-      .getMany();
-  }
-
-  public async findWithSkipAndTake(skip: number, take: number) {
-    return this.songRepository.find({ skip, take });
   }
 
   public findWhere(where: SongInput, skip: number, take: number) {

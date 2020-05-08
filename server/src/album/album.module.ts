@@ -9,6 +9,7 @@ import { Band } from '../band/band.entity';
 import { Song } from '../song/song.entity';
 import { BandModule } from '../band/band.module';
 import { BandService } from '../band/band.service';
+import { AlbumController } from './album.controller';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { BandService } from '../band/band.service';
     forwardRef(() => BandModule),
     SongModule
   ],
-  providers: [AlbumResolver, BandService, AlbumService, SongService]
+  providers: [AlbumResolver, BandService, AlbumService, SongService],
+  controllers: [AlbumController]
 })
 export class AlbumModule {}

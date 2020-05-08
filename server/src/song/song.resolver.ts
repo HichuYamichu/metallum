@@ -16,7 +16,7 @@ export class SongResolver {
 
   @Query(returns => Song, { name: 'song' })
   public async song(@Args('id') id: string) {
-    const album = await this.songService.findOneByID(id);
+    const album = await this.songService.findOneById(id);
     if (!album) {
       throw new NotFoundException(`song with id: ${id} does not exist`);
     }
