@@ -5,7 +5,6 @@ type Song struct {
 	Title  *string
 	Length *string
 	Lyrics *string
-	// AlbumID string
 }
 
 func (Song) TableName() string {
