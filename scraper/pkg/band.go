@@ -11,7 +11,7 @@ type Band struct {
 	Genre       *string
 	Themes      *string
 	Active      *string
-	Albums      []Album
+	Albums      []string `gorm:"-"`
 }
 
 func (Band) TableName() string {

@@ -3,11 +3,11 @@ package pkg
 import "fmt"
 
 const (
-	baseURL         = "https://www.metal-archives.com"
-	discographyPath = "/band/discography/id/"
-	descPath        = "/band/read-more/id/"
-	lyricsPath      = "/release/ajax-view-lyrics/id/"
-	listPath        = "/archives/ajax-band-list/selection/"
+	BaseURL         = "https://www.metal-archives.com"
+	DiscographyPath = "/band/discography/id/"
+	DescPath        = "/band/read-more/id/"
+	LyricsPath      = "/release/ajax-view-lyrics/id/"
+	ListPath        = "/archives/ajax-band-list/selection/"
 )
 
 // Kind kind of band

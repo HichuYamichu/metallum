@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -21,44 +20,6 @@ type message struct {
 
 var alpha = []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "#", "~"}
 
-func PerLetterGenerate() []<-chan string {
-	chans := make([]<-chan string, len(alpha))
-	for _, letter := range alpha {
-		ch := make(chan string)
-		go perLetterGenerate(letter, ch)
-		chans = append(chans, ch)
-	}
-	return chans
-}
-
-func perLetterGenerate(letter string, ch chan string) {
-	defer close(ch)
-	url := fmt.Sprintf("%s/browse/ajax-letter/l/%s/json/1?sEcho=1", baseURL, letter)
-	res, err := client.Get(url)
-	if err != nil {
-		panic(err)
-	}
-	defer res.Body.Close()
-	m := &message{}
-	json.NewDecoder(res.Body).Decode(m)
-	for i, sEcho := 0, 0; i < m.ItemsCount; i += 500 {
-		sEcho++
-		url := fmt.Sprintf("%s/browse/ajax-letter/l/%s/json/1?sEcho=%d&iDisplayStart=%d&iDisplayLength=500", baseURL, letter, sEcho, i)
-		res, err := client.Get(url)
-		if err != nil {
-			panic(err)
-		}
-		defer res.Body.Close()
-		m := &message{}
-		json.NewDecoder(res.Body).Decode(m)
-		for _, dataSet := range m.Data {
-			doc, _ := goquery.NewDocumentFromReader(strings.NewReader(dataSet[0]))
-			link, _ := doc.Find("a").Attr("href")
-			ch <- link
-		}
-	}
-}
-
 func GenerateAllBandURLs() <-chan string {
 	ch := make(chan string)
 	go generateAllBandURLs(ch)
@@ -70,7 +31,7 @@ func generateAllBandURLs(ch chan string) {
 	sEcho := 0
 	for _, letter := range alpha {
 		sEcho++
-		url := fmt.Sprintf("%s/browse/ajax-letter/l/%s/json/1?sEcho=%d", baseURL, letter, sEcho)
+		url := fmt.Sprintf("%s/browse/ajax-letter/l/%s/json/1?sEcho=%d", BaseURL, letter, sEcho)
 		res, err := client.Get(url)
 		if err != nil {
 			panic(err)
@@ -80,7 +41,7 @@ func generateAllBandURLs(ch chan string) {
 		json.NewDecoder(res.Body).Decode(m)
 		for i := 0; i < m.ItemsCount; i += 500 {
 			sEcho++
-			url := fmt.Sprintf("%s/browse/ajax-letter/l/%s/json/1?sEcho=%d&iDisplayStart=%d&iDisplayLength=500", baseURL, letter, sEcho, i)
+			url := fmt.Sprintf("%s/browse/ajax-letter/l/%s/json/1?sEcho=%d&iDisplayStart=%d&iDisplayLength=500", BaseURL, letter, sEcho, i)
 			res, err := client.Get(url)
 			defer res.Body.Close()
 			if err != nil {
@@ -108,7 +69,7 @@ func generateBandsURLs(day time.Time, kind Kind, page int, ch chan string) {
 	defer close(ch)
 	pathFragment := day.Format("2006-01")
 	params := fmt.Sprintf("sEcho=%d&sSortDir_0=desc&iDisplayStart=%d", page+1, page*200)
-	url := fmt.Sprintf("%s%s%s/by/%s/json/1?%s", baseURL, listPath, pathFragment, kind, params)
+	url := fmt.Sprintf("%s%s%s/by/%s/json/1?%s", BaseURL, ListPath, pathFragment, kind, params)
 	res, err := client.Get(url)
 	if err != nil {
 		panic(err)
@@ -137,7 +98,7 @@ func generateBandsURLs(day time.Time, kind Kind, page int, ch chan string) {
 	}
 }
 
-// ScrapeBand scrapes band data along with albums and songs
+// ScrapeBand scrapes band data
 func ScrapeBand(url string) (*Band, error) {
 	res, err := client.Get(url)
 	if err != nil {
@@ -169,40 +130,24 @@ func ScrapeBand(url string) (*Band, error) {
 		}
 	})
 
-	discographyURL := fmt.Sprintf("%s%s%s/tab/all", baseURL, discographyPath, band.ID)
+	discographyURL := fmt.Sprintf("%s%s%s/tab/all", BaseURL, DiscographyPath, band.ID)
 	discoRes, err := client.Get(discographyURL)
 	if err != nil {
 		return nil, err
 	}
 	defer discoRes.Body.Close()
 
-	albumsWG := &sync.WaitGroup{}
-	albumsCh := make(chan Album)
-
 	doc, _ = goquery.NewDocumentFromReader(discoRes.Body)
 	doc.Find("a").Each(func(i int, s *goquery.Selection) {
 		link, _ := s.Attr("href")
-		if !strings.Contains(link, fmt.Sprintf("%s/albums", baseURL)) {
+		if !strings.Contains(link, fmt.Sprintf("%s/albums", BaseURL)) {
 			return
 		}
-		albumsWG.Add(1)
-		go func() {
-			defer albumsWG.Done()
-			album, _ := ScrapeAlbum(link)
-			albumsCh <- *album
-		}()
+		id := maIDREGEXP.FindString(link)
+		band.Albums = append(band.Albums, id)
 	})
 
-	go func() {
-		albumsWG.Wait()
-		close(albumsCh)
-	}()
-
-	for album := range albumsCh {
-		band.Albums = append(band.Albums, album)
-	}
-
-	descURL := fmt.Sprintf("%s%s%s", baseURL, descPath, band.ID)
+	descURL := fmt.Sprintf("%s%s%s", BaseURL, DescPath, band.ID)
 	descRes, err := client.Get(descURL)
 	if err != nil {
 		return nil, err
@@ -238,38 +183,21 @@ func ScrapeAlbum(url string) (*Album, error) {
 		}
 	})
 
-	songsCount := doc.Find("table.table_lyrics tr.odd, table.table_lyrics tr.even").
-		Not(".displayNone").
-		Not(".sideRow").
-		Not(".discRow").
-		Length() - 1
-
-	songsWG := &sync.WaitGroup{}
-	songsCh := make(chan Song)
-
 	doc.Find("table.table_lyrics tr.odd, table.table_lyrics tr.even").
 		Not(".displayNone").
 		Not(".sideRow").
 		Not(".discRow").
-		Each(func(i int, s *goquery.Selection) {
-			if i >= songsCount {
-				return
+		EachWithBreak(func(i int, s *goquery.Selection) bool {
+			song, e := ScrapeSong(s)
+			if e != nil {
+				err = e
+				return false
 			}
-			songsWG.Add(1)
-			go func() {
-				defer songsWG.Done()
-				song, _ := ScrapeSong(s)
-				songsCh <- *song
-			}()
+			album.Songs = append(album.Songs, song)
+			return true
 		})
-
-	go func() {
-		songsWG.Wait()
-		close(songsCh)
-	}()
-
-	for song := range songsCh {
-		album.Songs = append(album.Songs, song)
+	if err != nil {
+		return nil, err
 	}
 
 	return album, nil
@@ -278,7 +206,8 @@ func ScrapeAlbum(url string) (*Album, error) {
 // ScrapeSong scrapes song
 func ScrapeSong(s *goquery.Selection) (*Song, error) {
 	song := &Song{}
-	s.Find("td").Each(func(i int, s *goquery.Selection) {
+	var err error
+	s.Find("td").EachWithBreak(func(i int, s *goquery.Selection) bool {
 		if i == 0 {
 			nameAttr, _ := s.Find("a").Attr("name")
 			song.ID = nameAttr
@@ -286,26 +215,35 @@ func ScrapeSong(s *goquery.Selection) (*Song, error) {
 			song.Title = normalize(s.Text())
 		} else if i == 2 {
 			song.Length = normalize(s.Text())
+		} else if i == 3 {
+			_, ok := s.Find("a").Attr("href")
+			if ok {
+				res, e := client.Get(fmt.Sprintf("%s%s%s", BaseURL, LyricsPath, song.ID))
+				if e != nil {
+					err = e
+					return false
+				}
+				defer res.Body.Close()
+				body, e := ioutil.ReadAll(res.Body)
+				if e != nil {
+					err = e
+					return false
+				}
+				song.Lyrics = normalize(string(body))
+			}
 		}
+		return true
 	})
-	res, err := client.Get(fmt.Sprintf("%s%s%s", baseURL, lyricsPath, song.ID))
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
-	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-	song.Lyrics = normalize(string(body))
-
 	return song, nil
 }
 
 func normalize(s string) *string {
 	s = strings.Trim(s, "\t \n")
 	s = regexp.MustCompile(`(?mi)<\/?[^>]+>`).ReplaceAllString(s, "")
-	s = regexp.MustCompile(`(?mi)\s{2,}`).ReplaceAllString(s, "")
 	if s == "N/A" {
 		return nil
 	} else if s == "(lyrics not available)" {
