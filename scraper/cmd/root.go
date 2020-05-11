@@ -30,5 +30,5 @@ func init() {
 	rootCmd.AddCommand(migrateCmd)
 	rootCmd.AddCommand(listenCmd)
 	rootCmd.AddCommand(updateCmd)
-	rootCmd.AddCommand(fullScrapeCmd)
+	rootCmd.AddCommand(scrapeCmd)
 }

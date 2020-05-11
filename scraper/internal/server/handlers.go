@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/hichuyamichu/metallum/pkg"
@@ -18,8 +19,6 @@ func (s *Server) CommandHandler(c echo.Context) error {
 	}
 
 	switch cmd.Name {
-	case "migrate":
-		s.db.AutoMigrate(&pkg.Band{}, &pkg.Album{}, &pkg.Song{})
 	case "full":
 		go s.Full()
 	case "update":
@@ -29,6 +28,8 @@ func (s *Server) CommandHandler(c echo.Context) error {
 			return err
 		}
 		go s.Update(today, kind)
+	default:
+		return fmt.Errorf("invalid command")
 	}
 
 	return nil

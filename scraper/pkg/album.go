@@ -6,7 +6,8 @@ type Album struct {
 	Type    *string
 	Release *string
 	Catalog *string
-	Songs   []*Song
+	BandID  string
+	Songs   []*Song `gorm:"-"`
 }
 
 func (Album) TableName() string {

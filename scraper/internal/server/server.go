@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/jinzhu/gorm"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
@@ -14,11 +14,11 @@ import (
 // Server main server struct
 type Server struct {
 	router *echo.Echo
-	db     *gorm.DB
+	db     *pgxpool.Pool
 }
 
 // New bootstraps server
-func New(db *gorm.DB) *Server {
+func New(db *pgxpool.Pool) *Server {
 	server := &Server{
 		router: echo.New(),
 		db:     db,

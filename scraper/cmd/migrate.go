@@ -1,12 +1,12 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
-	"github.com/hichuyamichu/metallum/internal/db"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -20,14 +20,16 @@ var migrateCmd = &cobra.Command{
 	ValidArgs: []string{up, down},
 	Args:      cobra.OnlyValidArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		d := db.Connect()
-		driver, err := postgres.WithInstance(d.DB(), &postgres.Config{})
+		dbHost := viper.GetString("db.host")
+		dbPort := viper.GetString("db.port")
+		dbUser := viper.GetString("db.user")
+		dbName := viper.GetString("db.name")
+		dbPass := viper.GetString("db.pass")
+		connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", dbUser, dbPass, dbHost, dbPort, dbName)
+		m, err := migrate.New("file://migrations", connStr)
 		if err != nil {
 			log.Fatal(err)
 		}
-		m, err := migrate.NewWithDatabaseInstance(
-			"file://migrations",
-			"postgres", driver)
 
 		switch args[0] {
 		case up:

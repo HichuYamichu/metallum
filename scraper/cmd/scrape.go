@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var fullScrapeCmd = &cobra.Command{
-	Use:   "full",
+var scrapeCmd = &cobra.Command{
+	Use:   "scrape",
 	Short: "Scrapes all bands data (will take a while)",
 	Run: func(cmd *cobra.Command, args []string) {
 		d := db.Connect()
