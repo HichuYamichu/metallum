@@ -22,7 +22,7 @@ import { TasksModule } from './tasks/tasks.module';
         port: configService.get<number>('DATABASE_PORT', 5432),
         username: configService.get('DATABASE_USER', 'postgres'),
         password: configService.get('DATABASE_PASS', 'postgres'),
-        database: configService.get('DATABASE_SCHEMA', 'metallum'),
+        database: configService.get('DATABASE_NAME', 'metallum'),
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
         synchronize: false
       })
