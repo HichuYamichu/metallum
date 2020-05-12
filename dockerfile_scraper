@@ -1,13 +1,15 @@
   
 FROM golang:latest AS build
 
+WORKDIR /build
+
 ENV GO111MODULE=on
 
-COPY go.mod go.sum ./
+COPY scraper/go.mod scraper/go.sum ./
 
 RUN go mod download
 
-COPY . .
+COPY scraper ./
 
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o metallum .
 
@@ -19,4 +21,4 @@ COPY --from=build /build/metallum /app/
 
 EXPOSE 7000
 
-CMD ["./metallum"]
+CMD ["./metallum", "listen"]
