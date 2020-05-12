@@ -6,8 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang-migrate/migrate"
 	"github.com/hichuyamichu/metallum/pkg"
 	"github.com/jackc/pgx/v4"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -19,6 +21,32 @@ const (
 type albumJob struct {
 	albumID string
 	bandID  string
+}
+
+func (s *Server) Migrate(t string) error {
+	dbHost := viper.GetString("db.host")
+	dbPort := viper.GetString("db.port")
+	dbUser := viper.GetString("db.user")
+	dbName := viper.GetString("db.name")
+	dbPass := viper.GetString("db.pass")
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", dbUser, dbPass, dbHost, dbPort, dbName)
+	m, err := migrate.New("file://migrations", connStr)
+	if err != nil {
+		return err
+	}
+
+	switch t {
+	case "up":
+		if err := m.Up(); err != nil {
+			return err
+		}
+	case "down":
+		if err := m.Down(); err != nil {
+			return err
+		}
+	}
+	m.Close()
+	return nil
 }
 
 func (s *Server) Update(day time.Time, kind pkg.Kind) {

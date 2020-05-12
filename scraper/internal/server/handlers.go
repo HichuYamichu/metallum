@@ -19,7 +19,7 @@ func (s *Server) CommandHandler(c echo.Context) error {
 	}
 
 	switch cmd.Name {
-	case "full":
+	case "scrape":
 		go s.Full()
 	case "update":
 		today := time.Now()
