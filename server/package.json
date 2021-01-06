@@ -25,7 +25,7 @@
     "@nestjs/typeorm": "^7.0.0",
     "apollo-server": "^2.13.0",
     "apollo-server-express": "^2.13.0",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "bottleneck": "^2.19.5",
     "cheerio": "^1.0.0-rc.3",
     "class-transformer": "^0.3.1",
